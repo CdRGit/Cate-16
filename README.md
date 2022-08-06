@@ -2,6 +2,7 @@
 
 ## Specs
 - 508 KiB Low RAM
+- 256 B of MMIO
 - 512 KiB Flash ROM
 - 2 MiB High RAM
 
