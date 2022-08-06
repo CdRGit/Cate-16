@@ -1,5 +1,10 @@
 # CATE-16 16 bit computer
 
+## Specs
+- 508 KiB Low RAM
+- 512 KiB Flash ROM
+- 2 MiB High RAM
+
 # Memory map
 256 * 64 KiB banks (65C816)
 
