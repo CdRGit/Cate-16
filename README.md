@@ -22,3 +22,6 @@ Larger memory mapped IO: **TODO**
 
 ## Banks 40-FF
 Not Allocated Yet
+
+# Emulator
+The CATE-16 emulator will be written in Rust
