@@ -1,6 +1,6 @@
 # Emulator
 
-Part of this emulator was adapted from Jonas Schievink's ['Breeze' SNES emulator](https://github.com/jonas-schievink/breeze-emu) licensed under MIT or Apache-2.0
+Part of this emulator (most specifically, the W65C816 emulation in src/machine/cpu) was adapted from Jonas Schievink's ['Breeze' SNES emulator](https://github.com/jonas-schievink/breeze-emu) licensed under MIT or Apache-2.0
 
 I admittedly do not have the best understanding of licenses, let alone double licenses like this, so I've just copied the LICENSE-MIT under here, if I have not done this correctly please do let me know
 
