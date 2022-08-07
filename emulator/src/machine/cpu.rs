@@ -9,6 +9,7 @@ const CPU_M = 1 << 5;
 const CPU_V = 1 << 6;
 const CPU_N = 1 << 7;
 
+#[derive(Debug)]
 pub struct W65C816 {
     aLo: u8, aHi: u8,
     xLo: u8, xHi: u8,
