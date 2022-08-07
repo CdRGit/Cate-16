@@ -35,15 +35,22 @@ pub struct W65C816 {
     bus: Bus,
 }
 
+const RESET_VEC8: u16 = 0xFFFC;
+
 impl W65C816 {
     pub fn new(mut bus: Bus) -> Self {
+        let pcl = bus.read(0, RESET_VEC8) as u16;
+        let pch = bus.read(0, RESET_VEC8 + 1) as u16;
+
+        let pc = (pch << 8) | pcl;
+
         W65C816 {
             a: 0,
             x: 0,
             y: 0,
-            s: 0,
+            s: 0x100,
             dbr: 0, pbr: 0,
-            d:   0, pc:  0,
+            d:   0, pc,
             emu: true,
             flags: Status::new(),
             bus,
