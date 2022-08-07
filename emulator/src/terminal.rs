@@ -45,11 +45,7 @@ impl Read for Terminal {
 
 impl Write for Terminal {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let res = self.stdout.lock().write(buf)?;
-
-        self.flush()?;
-
-        Ok(res)
+        self.stdout.lock().write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
