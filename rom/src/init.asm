@@ -1,7 +1,18 @@
 .segment "LOWRAM_0"
+.res $4000 ; reserve memory for direct pages and stack
 
 .segment "FLASH_0"
 reset:
+    CLC
+    XCE
+    REP #%00010000 ; small acc and large idx
+.i16
+.a8
+    LDX #$3FFF
+    TXS
+    ; stack ready
+    LDA #$55
+    STA $7F00 ; write into IO register 0 (crashes rn)
     STP
 tbd:
     STP
