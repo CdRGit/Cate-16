@@ -130,11 +130,6 @@ impl W65C816 {
         }
     }
 
-    fn trace(&mut self, pbr: u8, pc: u16, opcode: u8, name: &str, am: &str) {
-        println!("{{{}}} [{:02X}{:04X}] {:02X}: {} {}", self.bus.cycles, pbr, pc, opcode, name, am);
-        self.bus.cycles = 0;
-    }
-
     pub fn instruction(&mut self) -> RunStatus {
         if self.run_status != RunStatus::Running {
             return self.run_status;
@@ -146,12 +141,10 @@ impl W65C816 {
         macro_rules! instr {
             ( $name:ident ) => {{
                 self.$name();
-                self.trace(pbr, pc, opcode, stringify!($name), "implied");
             }};
             ( $name:ident $am:ident ) => {{
                 let am = self.$am();
                 self.$name(am);
-                self.trace(pbr, pc, opcode, stringify!($name), stringify!($am));
             }};
         }
 
