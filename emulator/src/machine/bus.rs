@@ -31,10 +31,6 @@ impl Bus {
         self.cycles = self.cycles.wrapping_add(1);
     }
 
-    pub fn idle(&mut self) {
-        self.cycle();
-    }
-
     pub fn read(&mut self, bank: u8, addr: u16) -> u8 {
         self.cycle();
         match bank {
