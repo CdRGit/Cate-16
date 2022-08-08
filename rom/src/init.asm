@@ -6,14 +6,29 @@ reset:
     CLC
     XCE
     REP #%00010000 ; small acc and large idx
-.i16
-.a8
     LDX #$3FFF
     TXS
-    ; stack ready
-    LDA #$55
-    STA $7F00 ; write into IO register 0 (crashes rn)
+    ; scan memory
+    REP #%00110000 ; large acc, large idx
+    LDX #$0004
+@loop:
+    DEX
+    DEX
+    TXA
+    STA a:$0000,X
+    CMP a:$0000,X
+    BNE @fail
+    CPX #$0000
+    BNE @loop
+    BRA @success
+@fail:
+    SEP #%00100000 ; small acc, large idx
+    LDA #$FF
+    STA $7F00 ; store $FF into IO $00 on failure
     STP
+@success:
+    SEP #%00100000 ; small acc, large idx
+    ; bank 0 has been tested and works correctly
 tbd:
     STP
 

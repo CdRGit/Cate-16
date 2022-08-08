@@ -1,5 +1,6 @@
 use super::W65C816;
 
+#[derive(Debug)]
 pub enum AddressingMode {
     Immediate(u16),
     Immediate8(u8),
@@ -50,10 +51,33 @@ impl AddressingMode {
         }
     }
 
+    pub fn storeb(self, cpu: &mut W65C816, value: u8) {
+        let (bank, addr) = self.address(cpu);
+        cpu.storeb(bank, addr, value)
+    }
+
+    pub fn storew(self, cpu: &mut W65C816, value: u16) {
+        let (bank, addr) = self.address(cpu);
+        cpu.storew(bank, addr, value)
+    }
+
+
     pub fn address(&self, cpu: &mut W65C816) -> (u8, u16) {
         use self::AddressingMode::*;
 
         match *self {
+            Direct(offset) => {
+                (0, cpu.d.wrapping_add(offset as u16))
+            }
+            Absolute(addr) => {
+                (cpu.dbr, addr)
+            }
+            AbsIndexedX(offset) => {
+                (cpu.dbr, offset.wrapping_add(cpu.x))
+            }
+            Rel(rel) => {
+                (cpu.pbr, (cpu.pc as i16).wrapping_add(rel as i16) as u16)
+            }
             _ => todo!()
         }
     }

@@ -1,3 +1,4 @@
 emulator/target
 rom/bin
 rom/obj
+emulator/trace.log

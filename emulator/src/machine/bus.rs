@@ -6,6 +6,8 @@ pub struct Bus {
     low_ram:   Box<[u8; 512 * 1024]>,
     flash_rom: Box<[u8; 512 * 1024]>,
     high_ram:  Box<[u8;2048 * 1024]>,
+
+    pub cycles: u64,
 }
 
 impl Bus {
@@ -21,10 +23,20 @@ impl Bus {
             low_ram:   Box::new([0u8; 512 * 1024]),
             flash_rom: Box::new(flash_rom),
             high_ram:  Box::new([0u8;2048 * 1024]),
+            cycles: 0
         }
     }
 
+    fn cycle(&mut self) {
+        self.cycles = self.cycles.wrapping_add(1);
+    }
+
+    pub fn idle(&mut self) {
+        self.cycle();
+    }
+
     pub fn read(&mut self, bank: u8, addr: u16) -> u8 {
+        self.cycle();
         match bank {
             0..=0x0F => {
                 match addr {
@@ -52,6 +64,7 @@ impl Bus {
     }
 
     pub fn write(&mut self, bank: u8, addr: u16, value: u8) {
+        self.cycle();
         match bank {
             0..=0x0F => {
                 match addr {
