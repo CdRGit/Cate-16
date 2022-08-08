@@ -134,8 +134,6 @@ impl W65C816 {
         if self.run_status != RunStatus::Running {
             return self.run_status;
         }
-        let pbr = self.pbr;
-        let pc = self.pc;
         let opcode = self.fetchb();
 
         macro_rules! instr {

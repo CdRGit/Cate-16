@@ -2,10 +2,6 @@ mod terminal;
 
 mod machine;
 
-use terminal::*;
-use std::io::Read;
-use std::io::Write;
-
 use machine::bus::*;
 use machine::cpu::*;
 
