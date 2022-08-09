@@ -19,7 +19,7 @@ reset:
 ram_check:
     ; scan memory
     REP #%00110000 ; large acc, large idx
-    LDX #$0004
+    LDX #$7F00
 @loop:
     DEX
     DEX
