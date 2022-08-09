@@ -57,7 +57,7 @@ tbd:
     STP
 
 hello_string:
-    .incbin "uart.asm"
+    .incbin "../../LICENSE"
     .asciiz "\n"
 
 .segment "ROM_VEC"
