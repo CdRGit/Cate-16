@@ -6,6 +6,7 @@
 
 .segment "LOWRAM_0"
 .res $4000 ; reserve memory for direct pages and stack
+.res $3000 ; reserve memory for user
 
 .segment "FLASH_0"
 reset:
