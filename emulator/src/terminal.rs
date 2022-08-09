@@ -12,7 +12,7 @@ pub struct Terminal {
 }
 
 impl Terminal {
-    pub fn make() -> Self {
+    pub fn new() -> Self {
         let stdin = 0;
 
         let termios = Termios::from_fd(stdin).unwrap();
