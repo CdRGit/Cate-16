@@ -29,6 +29,7 @@ impl Status {
     pub fn zero(&self) -> bool { (self.0 & ZERO_FLAG) != 0 }
     pub fn small_idx(&self) -> bool { (self.0 & SMALL_IDX_FLAG) != 0 }
     pub fn small_acc(&self) -> bool { (self.0 & SMALL_ACC_FLAG) != 0 }
+    pub fn negative(&self) -> bool { (self.0 & NEG_FLAG) != 0 }
 
     pub fn set_carry(&mut self, value: bool) { self.set(CARRY_FLAG, value); }
     pub fn set_zero(&mut self, value: bool) { self.set(ZERO_FLAG, value); }

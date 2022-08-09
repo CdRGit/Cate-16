@@ -192,6 +192,7 @@ impl W65C816 {
             // branches
             0x80 => instr!( bra rel ),
             0xF0 => instr!( beq rel ),
+            0x30 => instr!( bmi rel ),
             0xD0 => instr!( bne rel ),
 
             // jumps
@@ -203,6 +204,7 @@ impl W65C816 {
             0xCD => instr!( cmp absolute ),
             0xDD => instr!( cmp absolute_indexed_x ),
             0xC9 => instr!( cmp immediate_acc ),
+            0xEC => instr!( cpx absolute ),
             0xE0 => instr!( cpx immediate_index ),
 
             // register load + store
@@ -227,8 +229,10 @@ impl W65C816 {
 
             // stack manipulation
             0x48 => instr!( pha ),
+            0xDA => instr!( phx ),
 
             0x68 => instr!( pla ),
+            0xFA => instr!( plx ),
 
             // increment/decrement
             0xE8 => instr!( inx ),
@@ -297,6 +301,13 @@ impl W65C816 {
     fn beq(&mut self, am: AddressingMode) {
         let a = am.address(self);
         if self.p.zero() {
+            self.branch(a);
+        }
+    }
+
+    fn bmi(&mut self, am: AddressingMode) {
+        let a = am.address(self);
+        if self.p.negative() {
             self.branch(a);
         }
     }
@@ -433,8 +444,29 @@ impl W65C816 {
         }
     }
 
+    fn phx(&mut self) {
+        if self.p.small_idx() {
+            let a = self.x as u8;
+            self.pushb(a);
+        } else {
+            let a = self.x;
+            self.pushw(a);
+        }
+    }
+
+    fn plx(&mut self) {
+        if self.p.small_idx() {
+            let a = self.popb();
+            self.x = (self.x & 0xFF00) | self.p.set_nz_8(a) as u16;
+        } else {
+            let a = self.popw();
+            self.x = self.p.set_nz(a);
+        }
+    }
+
     fn inx(&mut self) {
         if self.p.small_idx() {
+            println!("[inx] SMALL_IDX");
             let res = self.p.set_nz_8((self.x as u8).wrapping_add(1));
             self.x = (self.x & 0xFF00) | res as u16;
         } else {

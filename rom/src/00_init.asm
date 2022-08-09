@@ -3,6 +3,7 @@
 .import uart_send_char
 .import uart_read_char
 .import uart_setup
+.import uart_flush
 
 .segment "LOWRAM_0"
 .res $4000 ; reserve memory for direct pages and stack
@@ -39,26 +40,25 @@ ram_check:
     ; bank 0 has been tested and works correctly
 uart_check:
     JSR uart_setup
-@cat_loop:
-    JSR uart_read_char
-    JSR uart_send_char
-    CMP #$0A
-    BNE @cat_loop
 
     LDX #$0000
 @loop:
     LDA hello_string,X
     BEQ @done
     INX
+    PHX
     JSR uart_send_char
+    PLX
     BRA @loop
 @done:
+    JSR uart_flush
     STP
 tbd:
     STP
 
 hello_string:
-    .asciiz "Hello!\n"
+    .incbin "uart.asm"
+    .asciiz "\n"
 
 .segment "ROM_VEC"
 ; native PRI_IRQ

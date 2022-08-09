@@ -1,3 +1,8 @@
+.segment "LOWRAM_0"
+tx_buffer: .res 256
+tx_write_ptr: .res 2
+tx_read_ptr: .res 2
+
 .segment "FLASH_0"
 
 .include "io.inc"
@@ -5,6 +10,7 @@
 .export uart_setup
 .export uart_read_char
 .export uart_send_char
+.export uart_flush
 
 .a8
 .i16
@@ -37,6 +43,9 @@ uart_setup:
     LDA #%11_00_0_1_1_1
     STA UART_FIFO_CONTROL
     ; should now be 8-N-1
+    LDX #$0000
+    STX tx_read_ptr
+    STX tx_write_ptr
     RTS
 
 uart_read_char:
@@ -49,10 +58,42 @@ uart_read_char:
 
 uart_send_char:
     PHA
-    @wait_loop:
+    LDA tx_write_ptr
+    CMP tx_read_ptr
+    BMI @flush
+@continue:
+    PLA
+    LDX tx_write_ptr
+    INC tx_write_ptr
+    STA tx_buffer,X
+    RTS
+@flush:
+    JSR uart_flush
+    BRA @continue
+
+uart_flush:
+    LDA tx_read_ptr
+    CMP tx_write_ptr
+    BEQ @exit
+    @wait_tx_empty:
         LDA UART_LINE_STATUS
         AND #%00_1_00000 ; transmit hold register empty
-        BEQ @wait_loop
-    PLA
-    STA UART_DATA
+        BEQ @wait_tx_empty
+    ; tx is empty, we can now send 16 bytes
+    LDY #16
+    @send_loop:
+        LDX tx_read_ptr
+        INC tx_read_ptr
+        LDA tx_buffer,X
+        STA UART_DATA
+        LDA tx_write_ptr
+        LDA tx_read_ptr
+        CMP tx_write_ptr
+        BEQ @exit
+        DEY
+        BNE @send_loop
+    BRA uart_flush
+
+@exit:
     RTS
+
