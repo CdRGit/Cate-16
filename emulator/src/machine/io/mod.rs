@@ -17,15 +17,15 @@ impl IO {
     pub fn read(&mut self, addr: u8) -> u8 {
         match addr {
             0x00..=0x0F => todo!(),
-            0x10..=0x18 => todo!(),
+            0x10..=0x18 => self.uart.read(addr & 0x07),
             0x19..=0xFF => todo!(),
         }
     }
 
-    pub fn write(&mut self, addr: u8) -> u8 {
+    pub fn write(&mut self, addr: u8, value: u8) {
         match addr {
             0x00..=0x0F => todo!(),
-            0x10..=0x18 => todo!(),
+            0x10..=0x18 => self.uart.write(addr & 0x07, value),
             0x19..=0xFF => todo!(),
         }
     }

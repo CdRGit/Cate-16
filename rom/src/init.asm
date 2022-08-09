@@ -1,3 +1,5 @@
+.include "io.inc"
+
 .segment "LOWRAM_0"
 .res $4000 ; reserve memory for direct pages and stack
 

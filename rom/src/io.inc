@@ -1,19 +1,11 @@
-.struct UART
-    .org $7F10
-    DIVISOR_LATCH:
-    DATA:
-        .byte
-    IRQ_ENABLE:
-        .byte
-    IRQ_STATUS:
-    FIFO_CTRL:
-        .byte
-    LINE_CTRL:
-        .byte
-    LINE_STATUS:
-        .byte
-    MODEM_STATUS:
-        .byte
-    SCRATCH:
-        .byte
-.endstruct
+UART_DATA = $FF10
+UART_IRQ_ENABLE = $FF11
+UART_IRQ_STATUS = $FF12
+UART_FIFO_CONTROL = $FF12
+UART_LINE_CONTROL = $FF13
+UART_MODEM_CONTROL = $FF14
+UART_LINE_STATUS = $FF15
+UART_MODEM_STATUS = $FF16
+UART_SCRATCH = $FF17
+
+UART_DIV_LATCH = $FF10

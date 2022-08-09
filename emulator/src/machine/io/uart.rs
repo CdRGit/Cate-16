@@ -44,4 +44,12 @@ impl UART {
     pub fn cycle(&mut self) {
         self.cycles = self.cycles.wrapping_add(1);
     }
+
+    pub fn read(&mut self, addr: u8) -> u8 {
+        todo!();
+    }
+
+    pub fn write(&mut self, addr: u8, value: u8) {
+        todo!();
+    }
 }

@@ -41,7 +41,7 @@ impl Bus {
                         self.low_ram[bank as usize * 0x8000 + addr as usize]
                     }
                     0x7F00..=0x7FFF => {
-                        panic!("MMIO not implemented yet!!!! {:02X}{:04X}", bank, addr);
+                        self.mmio.read(addr as u8)
                     }
                     0x8000..=0xFFFF => {
                         self.flash_rom[bank as usize * 0x8000 + (addr as usize & 0x7FFF)]
@@ -69,7 +69,7 @@ impl Bus {
                         self.low_ram[bank as usize * 0x8000 + addr as usize] = value;
                     }
                     0x7F00..=0x7FFF => {
-                        panic!("MMIO not implemented yet!!!! {:02X}{:04X} = {:02X}", bank, addr, value);
+                        self.mmio.write(addr as u8, value)
                     }
                     0x8000..=0xFFFF => {
                         panic!("Write to Flash ROM!!!! {:02X}{:04X} = {:02X}", bank, addr, value);
