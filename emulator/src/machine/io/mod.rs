@@ -2,17 +2,16 @@ pub mod uart;
 use uart::UART;
 
 pub struct IO {
-    uart: UART,
-    cycles: u64,
+    uart: UART
 }
 
 impl IO {
     pub fn new() -> Self {
-        Self { uart: UART::new(), cycles: 0 }
+        Self { uart: UART::new() }
     }
 
     pub fn cycle(&mut self) {
-        self.cycles = self.cycles.wrapping_add(1);
+        self.uart.cycle();
     }
 
     pub fn read(&mut self, addr: u8) -> u8 {

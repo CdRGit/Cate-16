@@ -29,8 +29,7 @@ reset:
 @success:
     SEP #%00100000 ; small acc, large idx
     ; bank 0 has been tested and works correctly
-@infinite:
-    BRA @infinite
+    STP
 tbd:
     STP
 

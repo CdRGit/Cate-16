@@ -9,8 +9,6 @@ pub struct Bus {
     flash_rom: Box<[u8; 512 * 1024]>,
     high_ram:  Box<[u8;2048 * 1024]>,
     mmio: IO,
-
-    pub cycles: u64,
 }
 
 impl Bus {
@@ -26,13 +24,12 @@ impl Bus {
             low_ram:   Box::new([0u8; 512 * 1024]),
             flash_rom: Box::new(flash_rom),
             high_ram:  Box::new([0u8;2048 * 1024]),
-            cycles: 0,
             mmio
         }
     }
 
     fn cycle(&mut self) {
-        self.cycles = self.cycles.wrapping_add(1);
+        self.mmio.cycle();
     }
 
     pub fn read(&mut self, bank: u8, addr: u16) -> u8 {

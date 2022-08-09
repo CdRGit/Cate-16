@@ -16,6 +16,8 @@ pub struct UART {
     tx_count: u8,
     rx_fifo: [u8;16],
     rx_count: u8,
+
+    cycles: u64,
 }
 
 impl UART {
@@ -35,6 +37,11 @@ impl UART {
             rx_fifo: [0;16],
             tx_count: 0,
             rx_count: 0,
+            cycles: 0,
         }
+    }
+
+    pub fn cycle(&mut self) {
+        self.cycles = self.cycles.wrapping_add(1);
     }
 }

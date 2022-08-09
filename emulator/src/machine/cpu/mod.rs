@@ -39,8 +39,6 @@ impl W65C816 {
 
         let pc = (pch << 8) | pcl;
 
-        bus.cycles = 0;
-
         W65C816 {
             a: 0,
             x: 0,
