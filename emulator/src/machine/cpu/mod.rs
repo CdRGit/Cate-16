@@ -200,6 +200,7 @@ impl W65C816 {
             0x60 => instr!( rts ),
 
             // comparisons
+            0xCD => instr!( cmp absolute ),
             0xDD => instr!( cmp absolute_indexed_x ),
             0xC9 => instr!( cmp immediate_acc ),
             0xE0 => instr!( cpx immediate_index ),
@@ -209,7 +210,11 @@ impl W65C816 {
             0xAD => instr!( lda absolute ),
             0xBD => instr!( lda absolute_indexed_x),
             0xA5 => instr!( lda direct ),
+
             0xA2 => instr!( ldx immediate_index ),
+            0xAE => instr!( ldx absolute ),
+
+            0xA0 => instr!( ldy immediate_index ),
 
             0x85 => instr!( sta direct ),
             0x8D => instr!( sta absolute ),
@@ -225,9 +230,13 @@ impl W65C816 {
 
             0x68 => instr!( pla ),
 
-            // register manipulation
+            // increment/decrement
             0xE8 => instr!( inx ),
             0xCA => instr!( dex ),
+
+            0x88 => instr!( dey ),
+
+            0xEE => instr!( inc absolute ),
 
             // flag manipulation
             0x18 => instr!( clc ),
@@ -358,6 +367,16 @@ impl W65C816 {
         }
     }
 
+    fn ldy(&mut self, am: AddressingMode) {
+        if self.p.small_idx() {
+            let val = am.loadb(self);
+            self.y = self.p.set_nz_8(val) as u16;
+        } else {
+            let val = am.loadw(self);
+            self.y = self.p.set_nz(val);
+        }
+    }
+
     fn sta(&mut self, am: AddressingMode) {
         if self.p.small_acc() {
             let b = self.a as u8;
@@ -429,6 +448,28 @@ impl W65C816 {
             self.x = (self.x & 0xFF00) | res as u16;
         } else {
             self.x = self.p.set_nz(self.x.wrapping_sub(1));
+        }
+    }
+
+    fn dey(&mut self) {
+        if self.p.small_idx() {
+            let res = self.p.set_nz_8((self.y as u8).wrapping_sub(1));
+            self.y = (self.y & 0xFF00) | res as u16;
+        } else {
+            self.y = self.p.set_nz(self.y.wrapping_sub(1));
+        }
+    }
+
+    fn inc(&mut self, am: AddressingMode) {
+        let (bank, addr) = am.address(self);
+        if self.p.small_acc() {
+            let res = self.loadb(bank, addr).wrapping_add(1);
+            self.p.set_nz_8(res);
+            self.storeb(bank, addr, res);
+        } else {
+            let res = self.loadw(bank, addr).wrapping_add(1);
+            self.p.set_nz(res);
+            self.storew(bank, addr, res);
         }
     }
 

@@ -24,7 +24,7 @@ impl IO {
 
     pub fn write(&mut self, addr: u8, value: u8) {
         match addr {
-            0x00..=0x0F => todo!(),
+            0x00..=0x0F => println!("[IO] {:02X}: {:02X}", addr, value),
             0x10..=0x18 => self.uart.write(addr & 0x07, value),
             0x19..=0xFF => todo!(),
         }
