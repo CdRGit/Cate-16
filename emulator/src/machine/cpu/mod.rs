@@ -102,6 +102,46 @@ impl W65C816 {
         (high << 8) | low
     }
 
+    fn pushb(&mut self, value: u8) {
+        let s = self.s;
+        self.storeb(0, s, value);
+        if self.emulation {
+            // stack must stay in 0x01xx
+            assert_eq!(self.s & 0xff00, 0x0100);
+            let s = self.s as u8 - 1;
+            self.s = (self.s & 0xff00) | s as u16;
+        } else {
+            self.s -= 1;
+        }
+    }
+
+    fn pushw(&mut self, value: u16) {
+        let hi = (value >> 8) as u8;
+        let lo = value as u8;
+        self.pushb(hi);
+        self.pushb(lo);
+    }
+
+    fn popb(&mut self) -> u8 {
+        if self.emulation {
+            // stack must stay in 0x01xx
+            assert_eq!(self.s & 0xff00, 0x0100);
+            let s = self.s as u8 + 1;
+            self.s = (self.s & 0xff00) | s as u16;
+        } else {
+            self.s += 1;
+        }
+
+        let s = self.s;
+        self.loadb(0, s)
+    }
+
+    fn popw(&mut self) -> u16 {
+        let lo = self.popb() as u16;
+        let hi = self.popb() as u16;
+        (hi << 8) | lo
+    }
+
     fn loadb(&mut self, bank: u8, addr: u16) -> u8 {
         self.bus.read(bank, addr)
     }
@@ -145,28 +185,48 @@ impl W65C816 {
         }
 
         match opcode {
+            // logic
+            0x29 => instr!( and immediate_acc ),
+            0x09 => instr!( ora immediate_acc ),
+
             // branches
             0x80 => instr!( bra rel ),
+            0xF0 => instr!( beq rel ),
             0xD0 => instr!( bne rel ),
+
+            // jumps
+            0x20 => instr!( jsr absolute ),
+
+            0x60 => instr!( rts ),
 
             // comparisons
             0xDD => instr!( cmp absolute_indexed_x ),
+            0xC9 => instr!( cmp immediate_acc ),
             0xE0 => instr!( cpx immediate_index ),
 
             // register load + store
             0xA9 => instr!( lda immediate_acc ),
+            0xAD => instr!( lda absolute ),
+            0xBD => instr!( lda absolute_indexed_x),
             0xA5 => instr!( lda direct ),
             0xA2 => instr!( ldx immediate_index ),
 
             0x85 => instr!( sta direct ),
             0x8D => instr!( sta absolute ),
             0x9D => instr!( sta absolute_indexed_x ),
+            0x8E => instr!( stx absolute ),
 
             // register transfers
             0x8A => instr!( txa ),
             0x9A => instr!( txs ),
 
+            // stack manipulation
+            0x48 => instr!( pha ),
+
+            0x68 => instr!( pla ),
+
             // register manipulation
+            0xE8 => instr!( inx ),
             0xCA => instr!( dex ),
 
             // flag manipulation
@@ -183,6 +243,7 @@ impl W65C816 {
 
             0xC2 => instr!( rep immediate8 ),
             0xE2 => instr!( sep immediate8 ),
+
             // processor control
             0xDB => instr!( stp ),
             0xCB => instr!( wai ),
@@ -193,9 +254,42 @@ impl W65C816 {
         self.run_status
     }
 
+    fn and(&mut self, am: AddressingMode) {
+        if self.p.small_acc() {
+            let val = am.loadb(self);
+            let res = self.a as u8 & val;
+            self.p.set_nz_8(res);
+            self.a = (self.a & 0xFF00) | res as u16;
+        } else {
+            let val = am.loadw(self);
+            let res = self.a & val;
+            self.a = self.p.set_nz(res);
+        }
+    }
+
+    fn ora(&mut self, am: AddressingMode) {
+        if self.p.small_acc() {
+            let val = am.loadb(self);
+            let res = self.a as u8 | val;
+            self.p.set_nz_8(res);
+            self.a = (self.a & 0xFF00) | res as u16;
+        } else {
+            let val = am.loadw(self);
+            let res = self.a | val;
+            self.a = self.p.set_nz(res);
+        }
+    }
+
     fn bra(&mut self, am: AddressingMode) {
         let a = am.address(self);
         self.branch(a);
+    }
+
+    fn beq(&mut self, am: AddressingMode) {
+        let a = am.address(self);
+        if self.p.zero() {
+            self.branch(a);
+        }
     }
 
     fn bne(&mut self, am: AddressingMode) {
@@ -203,6 +297,21 @@ impl W65C816 {
         if !self.p.zero() {
             self.branch(a);
         }
+    }
+
+    fn jsr(&mut self, am: AddressingMode) {
+        let pc = self.pc - 1;
+        self.pushb((pc >> 8) as u8);
+        self.pushb(pc as u8);
+
+        self.pc = am.address(self).1;
+    }
+
+    fn rts(&mut self) {
+        let pcl = self.popb() as u16;
+        let pch = self.popb() as u16;
+        let pc = (pch << 8) | pcl;
+        self.pc = pc + 1;   // +1 since the last byte of the JSR was saved
     }
 
     fn cmp(&mut self, am: AddressingMode) {
@@ -259,11 +368,13 @@ impl W65C816 {
         }
     }
 
-    fn txs(&mut self) {
-        if self.emulation {
-            self.s = 0x0100 | (self.x & 0xFF);
+    fn stx(&mut self, am: AddressingMode) {
+        if self.p.small_idx() {
+            let b = self.x as u8;
+            am.storeb(self, b);
         } else {
-            self.s = self.x;
+            let w = self.x;
+            am.storew(self, w);
         }
     }
 
@@ -272,6 +383,43 @@ impl W65C816 {
             self.a = (self.a & 0xFF00) | self.p.set_nz_8(self.x as u8) as u16;
         } else {
             self.a = self.p.set_nz(self.x);
+        }
+    }
+
+    fn txs(&mut self) {
+        if self.emulation {
+            self.s = 0x0100 | (self.x & 0xFF);
+        } else {
+            self.s = self.x;
+        }
+    }
+
+    fn pha(&mut self) {
+        if self.p.small_acc() {
+            let a = self.a as u8;
+            self.pushb(a);
+        } else {
+            let a = self.a;
+            self.pushw(a);
+        }
+    }
+
+    fn pla(&mut self) {
+        if self.p.small_acc() {
+            let a = self.popb();
+            self.a = (self.a & 0xFF00) | self.p.set_nz_8(a) as u16;
+        } else {
+            let a = self.popw();
+            self.a = self.p.set_nz(a);
+        }
+    }
+
+    fn inx(&mut self) {
+        if self.p.small_idx() {
+            let res = self.p.set_nz_8((self.x as u8).wrapping_add(1));
+            self.x = (self.x & 0xFF00) | res as u16;
+        } else {
+            self.x = self.p.set_nz(self.x.wrapping_add(1));
         }
     }
 

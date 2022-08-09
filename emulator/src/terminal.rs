@@ -32,8 +32,6 @@ impl Terminal {
 impl Drop for Terminal {
     fn drop(&mut self) {
         tcsetattr(0, TCSANOW, &self.termios).unwrap();
-
-        println!("Dropping!")
     }
 }
 

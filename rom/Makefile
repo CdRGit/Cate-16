@@ -5,4 +5,4 @@ bin/rom: obj/*.o
 	ld65 -o bin/rom -C cate-16_layout.cfg obj/*.o
 
 obj/%.o: src/%.asm
-	ca65 -o $@ $? --cpu 65816 --smart
+	ca65 -o $@ $? --cpu 65816 --smart --feature string_escapes --feature underline_in_numbers
