@@ -157,7 +157,7 @@ error_msg:
     .asciiz " !ERROR!\n"
 
 welcome_msg:
-    .asciiz "Cate-16 ROM Monitor\n"
+    .asciiz "CATE-16 ROM Monitor\n"
 
 hex_table:
     .byte "0123456789ABCDEF"

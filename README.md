@@ -6,6 +6,11 @@
 - 512 KiB Flash ROM
 - 2 MiB High RAM
 
+# ROM Monitor
+Currently the CATE-16 runs a simple ROM monitor with two commands:
+- `Rxxxxxx` which reads consecutive bytes from 24 bit address `xxxxxx` (enter after the command, any other key to keep reading)
+- `H` which halts the computer immediately
+
 # Memory map
 256 * 64 KiB banks (65C816)
 
@@ -24,4 +29,4 @@ Larger memory mapped IO: **TODO**
 Not Allocated Yet
 
 # Emulator
-The CATE-16 emulator will be written in Rust
+The CATE-16 emulator is written in Rust
