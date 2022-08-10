@@ -204,8 +204,11 @@ impl W65C816 {
             0xCD => instr!( cmp absolute ),
             0xDD => instr!( cmp absolute_indexed_x ),
             0xC9 => instr!( cmp immediate_acc ),
+
             0xEC => instr!( cpx absolute ),
             0xE0 => instr!( cpx immediate_index ),
+
+            0xC0 => instr!( cpy immediate_index ),
 
             // register load + store
             0xA9 => instr!( lda immediate_acc ),
@@ -221,23 +224,35 @@ impl W65C816 {
             0x85 => instr!( sta direct ),
             0x8D => instr!( sta absolute ),
             0x9D => instr!( sta absolute_indexed_x ),
+            0x99 => instr!( sta absolute_indexed_y ),
+
+            0x97 => instr!( sta direct_indirect_long_idx ),
+
+            0x86 => instr!( stx direct ),
             0x8E => instr!( stx absolute ),
+
+            0x84 => instr!( sty direct ),
+            0x8C => instr!( sty absolute ),
 
             // register transfers
             0x8A => instr!( txa ),
             0x9A => instr!( txs ),
+            0xBB => instr!( tyx ),
 
             // stack manipulation
             0x48 => instr!( pha ),
             0xDA => instr!( phx ),
+            0x5A => instr!( phy ),
 
             0x68 => instr!( pla ),
             0xFA => instr!( plx ),
+            0x7A => instr!( ply ),
 
             // increment/decrement
             0xE8 => instr!( inx ),
             0xCA => instr!( dex ),
 
+            0xC8 => instr!( iny ),
             0x88 => instr!( dey ),
 
             0xEE => instr!( inc absolute ),
@@ -358,6 +373,18 @@ impl W65C816 {
         }
     }
 
+    fn cpy(&mut self, am: AddressingMode) {
+        if self.p.small_idx() {
+            let y = self.y as u8;
+            let val = am.loadb(self);
+            self.compare8(y, val);
+        } else {
+            let y = self.y;
+            let val = am.loadw(self);
+            self.compare(y, val);
+        }
+    }
+
     fn lda(&mut self, am: AddressingMode) {
         if self.p.small_acc() {
             let val = am.loadb(self);
@@ -408,11 +435,29 @@ impl W65C816 {
         }
     }
 
+    fn sty(&mut self, am: AddressingMode) {
+        if self.p.small_idx() {
+            let b = self.y as u8;
+            am.storeb(self, b);
+        } else {
+            let w = self.y;
+            am.storew(self, w);
+        }
+    }
+
     fn txa(&mut self) {
         if self.p.small_acc() {
             self.a = (self.a & 0xFF00) | self.p.set_nz_8(self.x as u8) as u16;
         } else {
             self.a = self.p.set_nz(self.x);
+        }
+    }
+
+    fn tyx(&mut self) {
+        if self.p.small_idx() {
+            self.x = (self.x & 0xFF00) | self.p.set_nz_8(self.y as u8) as u16;
+        } else {
+            self.x = self.p.set_nz(self.y);
         }
     }
 
@@ -464,6 +509,26 @@ impl W65C816 {
         }
     }
 
+    fn phy(&mut self) {
+        if self.p.small_idx() {
+            let a = self.y as u8;
+            self.pushb(a);
+        } else {
+            let a = self.y;
+            self.pushw(a);
+        }
+    }
+
+    fn ply(&mut self) {
+        if self.p.small_idx() {
+            let a = self.popb();
+            self.y = (self.y & 0xFF00) | self.p.set_nz_8(a) as u16;
+        } else {
+            let a = self.popw();
+            self.y = self.p.set_nz(a);
+        }
+    }
+
     fn inx(&mut self) {
         if self.p.small_idx() {
             println!("[inx] SMALL_IDX");
@@ -471,6 +536,16 @@ impl W65C816 {
             self.x = (self.x & 0xFF00) | res as u16;
         } else {
             self.x = self.p.set_nz(self.x.wrapping_add(1));
+        }
+    }
+
+    fn iny(&mut self) {
+        if self.p.small_idx() {
+            println!("[inx] SMALL_IDX");
+            let res = self.p.set_nz_8((self.y as u8).wrapping_add(1));
+            self.y = (self.y & 0xFF00) | res as u16;
+        } else {
+            self.y = self.p.set_nz(self.y.wrapping_add(1));
         }
     }
 
@@ -551,6 +626,14 @@ impl W65C816 {
 
     fn absolute_indexed_x(&mut self) -> AddressingMode {
         AddressingMode::AbsIndexedX(self.fetchw())
+    }
+
+    fn absolute_indexed_y(&mut self) -> AddressingMode {
+        AddressingMode::AbsIndexedY(self.fetchw())
+    }
+
+    fn direct_indirect_long_idx(&mut self) -> AddressingMode {
+        AddressingMode::DirectIndirectLongIdx(self.fetchb())
     }
 
     fn immediate8(&mut self) -> AddressingMode {

@@ -75,8 +75,27 @@ impl AddressingMode {
             AbsIndexedX(offset) => {
                 (cpu.dbr, offset.wrapping_add(cpu.x))
             }
+            AbsIndexedY(offset) => {
+                (cpu.dbr, offset.wrapping_add(cpu.y))
+            }
             Rel(rel) => {
                 (cpu.pbr, (cpu.pc as i16).wrapping_add(rel as i16) as u16)
+            }
+            DirectIndirectLongIdx(offset) => {
+                // "The 24-bit base address is pointed to by the sum of the second byte of the
+                // instruction and the Direct Register. The effective address is this 24-bit base
+                // address plus the Y Index Register."
+                let addr_ptr = cpu.d.wrapping_add(offset as u16);
+                let lo = cpu.loadb(0, addr_ptr) as u32;
+                let hi = cpu.loadb(0, addr_ptr + 1) as u32;
+                let bank = cpu.loadb(0, addr_ptr + 2) as u32;
+                let base_address = (bank << 16) | (hi << 8) | lo;
+                let eff_addr = base_address + cpu.y as u32;
+                assert!(eff_addr & 0xff000000 == 0, "address overflow");
+
+                let bank = (eff_addr >> 16) as u8;
+                let addr = eff_addr as u16;
+                (bank, addr)
             }
             _ => todo!()
         }

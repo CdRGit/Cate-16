@@ -4,10 +4,13 @@
 .import uart_read_char
 .import uart_setup
 .import uart_flush
+.import uart_read_line
 
 .segment "LOWRAM_0"
 .res $4000 ; reserve memory for direct pages and stack
 .res $3000 ; reserve memory for user
+read_buff: ; readline buffer
+    .res 257
 
 .segment "FLASH_0"
 reset:
@@ -16,49 +19,46 @@ reset:
     REP #%00010000 ; small acc and large idx
     LDX #$3FFF
     TXS
-ram_check:
-    ; scan memory
-    REP #%00110000 ; large acc, large idx
-    LDX #$7F00
-@loop:
-    DEX
-    DEX
-    TXA
-    STA a:$0000,X
-    CMP a:$0000,X
-    BNE @fail
-    CPX #$0000
-    BNE @loop
-    BRA @success
-@fail:
-    SEP #%00100000 ; small acc, large idx
-    LDA #$FF
-    STA $7F00 ; store $FF into IO $00 on failure
-    STP
-@success:
-    SEP #%00100000 ; small acc, large idx
-    ; bank 0 has been tested and works correctly
-uart_check:
+uart:
     JSR uart_setup
 
-    LDX #$0000
-@loop:
-    LDA hello_string,X
-    BEQ @done
-    INX
-    PHX
+    LDA #'>'
     JSR uart_send_char
-    PLX
-    BRA @loop
+    LDA #' '
+    JSR uart_send_char
+    JSR uart_flush
+    LDA #0
+    LDX #read_buff
+    LDY #256
+    JSR uart_read_line
+    LDA #$00
+    STA read_buff,Y
+
+    LDA #$0A
+    JSR uart_send_char
+    LDA #$0A
+    JSR uart_send_char
+    LDA #'-'
+    JSR uart_send_char
+    LDA #' '
+    JSR uart_send_char
+    LDX #$0000
+@send_loop:
+    LDA read_buff,X
+    BEQ @done
+    PHX ; preserve X
+    JSR uart_send_char
+    PLX ; restore X
+    INX
+    BRA @send_loop
+
 @done:
+    LDA #$0A
+    JSR uart_send_char
     JSR uart_flush
     STP
 tbd:
     STP
-
-hello_string:
-    .incbin "../../LICENSE"
-    .asciiz "\n"
 
 .segment "ROM_VEC"
 ; native PRI_IRQ
