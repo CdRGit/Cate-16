@@ -20,9 +20,13 @@ read_buff: ; readline buffer
 .i16
 
 monitor_start:
+    LDA #^welcome_msg
+    LDX #welcome_msg
+    JSR uart_send_string
+    JSR uart_flush
 @command_loop:
     JSR prompt
-    LDA #$00
+    LDA #^read_buff
     LDX #read_buff
     LDY #$256
     JSR uart_read_line
@@ -35,6 +39,13 @@ execute_command:
     BNE @not_read
     JMP read
 @not_read:
+    CMP #'H'
+    BNE @not_halt
+    LDA #$0A
+    JSR uart_send_char
+    JSR uart_flush
+    STP
+@not_halt:
     JMP error
 
 read:
@@ -130,6 +141,9 @@ prompt:
 
 error_msg:
     .asciiz " !ERROR!\n"
+
+welcome_msg:
+    .asciiz "Cate-16 ROM Monitor\n"
 
 hex_table:
     .byte "0123456789ABCDEF"
