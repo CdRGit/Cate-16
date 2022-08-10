@@ -1,5 +1,6 @@
 .export monitor_start
 
+.import uart_read_char
 .import uart_read_line
 .import uart_send_char
 .import uart_send_string
@@ -50,23 +51,26 @@ execute_command:
 
 read:
     LDX #$0001 ; offset of 1
-    LDY #$0003 ; counter
-    @ptr_loop:
-        JSR read_hex_8
-        STA ptr_0-1,Y
-        DEY
-        BNE @ptr_loop
+    JSR read_ptr_0
 
     LDA read_buff,X
     BNE @error ; make sure we've reached the end of the buffer
 
-    LDA #':'
-    JSR uart_send_char
-    LDA [ptr_0]
-    JSR write_hex_8
+    LDY #$0000
+    @read_loop:
+        LDA #':'
+        JSR uart_send_char
+        LDA [ptr_0],Y
+        PHY
+        JSR write_hex_8
+        JSR uart_flush
+        JSR uart_read_char
+        PLY
+        INY
+        CMP #$0A
+        BNE @read_loop ; while the character is not '\n' we loop
     LDA #$0A
     JSR uart_send_char
-    JSR uart_flush
 
     RTS
 @error:
@@ -97,6 +101,16 @@ error:
     JSR uart_send_string
     JSR uart_flush
     RTS
+
+read_ptr_0:
+    LDY #$0003 ; counter
+    @ptr_loop:
+        JSR read_hex_8
+        STA ptr_0-1,Y
+        DEY
+        BNE @ptr_loop
+    RTS
+
 
 read_hex_8:
     ; X = offset
