@@ -27,6 +27,7 @@ impl Status {
 
     pub fn carry(&self) -> bool { (self.0 & CARRY_FLAG) != 0 }
     pub fn zero(&self) -> bool { (self.0 & ZERO_FLAG) != 0 }
+    pub fn decimal(&self) -> bool { (self.0 & DEC_FLAG) != 0 }
     pub fn small_idx(&self) -> bool { (self.0 & SMALL_IDX_FLAG) != 0 }
     pub fn small_acc(&self) -> bool { (self.0 & SMALL_ACC_FLAG) != 0 }
     pub fn negative(&self) -> bool { (self.0 & NEG_FLAG) != 0 }

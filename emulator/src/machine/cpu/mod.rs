@@ -185,8 +185,16 @@ impl W65C816 {
         }
 
         match opcode {
+            // math
+            0xE9 => instr!( sbc immediate_acc ),
+
+            0x0A => instr!( asl_a ),
+            0x4A => instr!( lsr_a ),
+
             // logic
             0x29 => instr!( and immediate_acc ),
+
+            0x05 => instr!( ora direct ),
             0x09 => instr!( ora immediate_acc ),
 
             // branches
@@ -196,6 +204,7 @@ impl W65C816 {
             0xD0 => instr!( bne rel ),
 
             // jumps
+            0x4C => instr!( jmp absolute ),
             0x20 => instr!( jsr absolute ),
 
             0x60 => instr!( rts ),
@@ -212,6 +221,9 @@ impl W65C816 {
 
             // register load + store
             0xA9 => instr!( lda immediate_acc ),
+
+            0xA7 => instr!( lda direct_indirect_long ),
+            0xB7 => instr!( lda direct_indirect_long_idx ),
             0xAD => instr!( lda absolute ),
             0xBD => instr!( lda absolute_indexed_x),
             0xA5 => instr!( lda direct ),
@@ -235,9 +247,12 @@ impl W65C816 {
             0x8C => instr!( sty absolute ),
 
             // register transfers
+            0xAA => instr!( tax ),
             0x8A => instr!( txa ),
             0x9A => instr!( txs ),
             0xBB => instr!( tyx ),
+
+            0xEB => instr!( xba ),
 
             // stack manipulation
             0x48 => instr!( pha ),
@@ -280,6 +295,79 @@ impl W65C816 {
         }
 
         self.run_status
+    }
+
+    fn sbc(&mut self, am: AddressingMode) {
+        // Sets N, Z, C and V
+        let c: i16 = if self.p.carry() { 1 } else { 0 };
+
+        if self.p.small_acc() {
+            let a = self.a as i16 & 0xff;
+            let v = am.loadb(self) as i16 ^ 0xff;
+            let mut res: i16 = if self.p.decimal() {
+                let mut low: i16 = (a & 0x0f) + (v & 0x0f) + c;
+                if low < 0x10 { low -= 6; }
+
+                (a & 0xf0) + (v & 0xf0) + (low & 0x0f) + if low > 0x0f { 0x10 } else { 0x00 }
+            } else {
+                a + v + c
+            };
+            self.p.set_overflow((a & 0x80) == (v & 0x80) && (a & 0x80) != (res & 0x80));
+            if self.p.decimal() && res < 0x100 { res -= 0x60; }
+            self.p.set_carry(res > 255);
+
+            self.a = (self.a & 0xff00) | self.p.set_nz_8(res as u8) as u16;
+        } else {
+            let a = self.a as i32;
+            let v = am.loadw(self) as i32 ^ 0xffff;
+            let mut res: i32 = if self.p.decimal() {
+                let mut res0 = (a & 0x000f) + (v & 0x000f) + c as i32;
+                if res0 < 0x0010 { res0 -= 0x0006; }
+
+                let mut res1 = (a & 0x00f0) + (v & 0x00f0) + (res0 & 0x000f) +
+                    if res0 > 0x000f { 0x10 } else { 0x00 };
+                if res1 < 0x0100 { res1 -= 0x0060; }
+
+                let mut res2 = (a & 0x0f00) + (v & 0x0f00) + (res1 & 0x00ff) +
+                    if res1 > 0x00ff { 0x100 } else { 0x000 };
+                if res2 < 0x1000 { res2 -= 0x0600; }
+
+                (a as i32 & 0xf000) + (v as i32 & 0xf000) + (res2 as i32 & 0x0fff) +
+                    if res2 > 0x0fff { 0x1000 } else { 0x0000 }
+            } else {
+                self.a as i32 + v as i32 + c as i32
+            };
+            self.p.set_overflow((self.a ^ res as u16) & 0x8000 != 0 && (self.a ^ v as u16) & 0x8000 == 0);
+            if self.p.decimal() && res < 0x10000 { res -= 0x6000; }
+            self.p.set_carry(res > 65535);
+
+            self.a = self.p.set_nz(res as u16);
+        }
+    }
+
+
+    fn asl_a(&mut self) {
+        // Sets N, Z and C. The rightmost bit is filled with 0.
+        if self.p.small_acc() {
+            let a = self.a as u8;
+            self.p.set_carry(self.a & 0x80 != 0);
+            self.a = (self.a & 0xff00) | self.p.set_nz_8(a << 1) as u16;
+        } else {
+            self.p.set_carry(self.a & 0x8000 != 0);
+            self.a = self.p.set_nz(self.a << 1);
+        }
+    }
+
+    fn lsr_a(&mut self) {
+        // Sets N (always cleared), Z and C. The leftmost bit is filled with 0.
+        if self.p.small_acc() {
+            let a = self.a as u8;
+            self.p.set_carry(self.a & 0x01 != 0);
+            self.a = (self.a & 0xff00) | self.p.set_nz_8(a >> 1) as u16;
+        } else {
+            self.p.set_carry(self.a & 0x0001 != 0);
+            self.a = self.p.set_nz(self.a >> 1);
+        }
     }
 
     fn and(&mut self, am: AddressingMode) {
@@ -332,6 +420,11 @@ impl W65C816 {
         if !self.p.zero() {
             self.branch(a);
         }
+    }
+
+    fn jmp(&mut self, am: AddressingMode) {
+        let (_, addr) = am.address(self);
+        self.pc = addr;
     }
 
     fn jsr(&mut self, am: AddressingMode) {
@@ -388,7 +481,7 @@ impl W65C816 {
     fn lda(&mut self, am: AddressingMode) {
         if self.p.small_acc() {
             let val = am.loadb(self);
-            self.a = self.p.set_nz_8(val) as u16;
+            self.a = (self.a & 0xFF00) | self.p.set_nz_8(val) as u16;
         } else {
             let val = am.loadw(self);
             self.a = self.p.set_nz(val);
@@ -445,6 +538,14 @@ impl W65C816 {
         }
     }
 
+    fn tax(&mut self) {
+        if self.p.small_idx() {
+            self.x = (self.x & 0xFF00) | self.p.set_nz_8(self.a as u8) as u16;
+        } else {
+            self.x = self.p.set_nz(self.a);
+        }
+    }
+
     fn txa(&mut self) {
         if self.p.small_acc() {
             self.a = (self.a & 0xFF00) | self.p.set_nz_8(self.x as u8) as u16;
@@ -467,6 +568,15 @@ impl W65C816 {
         } else {
             self.s = self.x;
         }
+    }
+
+    fn xba(&mut self) {
+        // Changes N and Z: "The flags are changed based on the new value of the low byte, the A
+        // accumulator (that is, on the former value of the high byte, the B accumulator), even in
+        // sixteen-bit accumulator mode."
+        let lo = self.a & 0xff;
+        let hi = self.a >> 8;
+        self.a = (lo << 8) | self.p.set_nz_8(hi as u8) as u16;
     }
 
     fn pha(&mut self) {
@@ -630,6 +740,10 @@ impl W65C816 {
 
     fn absolute_indexed_y(&mut self) -> AddressingMode {
         AddressingMode::AbsIndexedY(self.fetchw())
+    }
+
+    fn direct_indirect_long(&mut self) -> AddressingMode {
+        AddressingMode::DirectIndirectLong(self.fetchb())
     }
 
     fn direct_indirect_long_idx(&mut self) -> AddressingMode {

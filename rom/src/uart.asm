@@ -1,6 +1,7 @@
 .zeropage
 readbuff_ptr: .res 3
 readbuff_size: .res 2
+writebuff_ptr: .res 3
 
 .segment "LOWRAM_0"
 tx_buffer: .res 256
@@ -13,9 +14,10 @@ tx_read_ptr: .res 2
 
 .export uart_setup
 .export uart_read_char
-.export uart_send_char
-.export uart_flush
 .export uart_read_line
+.export uart_send_char
+.export uart_send_string
+.export uart_flush
 
 .a8
 .i16
@@ -60,6 +62,25 @@ uart_read_char:
         BEQ @wait_loop
     LDA UART_DATA
     RTS
+
+; [A:23-15][X:15-0] ptr
+; null terminated string
+; clobbers all registers
+uart_send_string:
+    STX writebuff_ptr
+    STA writebuff_ptr + 2
+    LDY #$0000
+@send_loop:
+    LDA [writebuff_ptr],Y
+    BEQ @done
+    PHY
+    JSR uart_send_char
+    PLY
+    INY
+    BRA @send_loop
+@done:
+    RTS
+
 
 ; [A:23-16][X:15-0] ptr
 ; [Y:15-0]
@@ -115,6 +136,10 @@ uart_read_line:
     BNE @read_loop
 
 @exit:
+    PHA
+    LDA #$00
+    STA [readbuff_ptr],Y
+    PLA
     RTS
 
 uart_send_char:

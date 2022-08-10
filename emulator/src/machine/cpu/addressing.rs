@@ -81,6 +81,13 @@ impl AddressingMode {
             Rel(rel) => {
                 (cpu.pbr, (cpu.pc as i16).wrapping_add(rel as i16) as u16)
             }
+            DirectIndirectLong(offset) => {
+                let addr_ptr = cpu.d.wrapping_add(offset as u16);
+                let lo = cpu.loadb(0, addr_ptr) as u16;
+                let hi = cpu.loadb(0, addr_ptr + 1) as u16;
+                let bank = cpu.loadb(0, addr_ptr + 2);
+                (bank, (hi << 8) | lo)
+            }
             DirectIndirectLongIdx(offset) => {
                 // "The 24-bit base address is pointed to by the sum of the second byte of the
                 // instruction and the Direct Register. The effective address is this 24-bit base
