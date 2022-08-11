@@ -13,8 +13,6 @@ scratch:
     .res 16
 
 .segment "LOWRAM_0"
-read_buff: ; readline buffer
-    .res 257
 
 .segment "FLASH_0"
 .a8
@@ -27,34 +25,33 @@ monitor_start:
     JSR uart_flush
 @command_loop:
     JSR prompt
-    LDA #^read_buff
-    LDX #read_buff
-    LDY #$256
-    JSR uart_read_line
     JSR execute_command
     BRA @command_loop
 
 execute_command:
-    LDA read_buff ; load first character
+    JSR uart_read_char
+    PHA
+    JSR uart_send_char
+    JSR uart_flush
+    PLA
     CMP #'R'
     BNE @not_read
     JMP read
 @not_read:
     CMP #'H'
     BNE @not_halt
+    JMP halt
+@not_halt:
+    JMP error
+
+halt:
     LDA #$0A
     JSR uart_send_char
     JSR uart_flush
     STP
-@not_halt:
-    JMP error
 
 read:
-    LDX #$0001 ; offset of 1
     JSR read_ptr_0
-
-    LDA read_buff,X
-    BNE @error ; make sure we've reached the end of the buffer
 
     LDY #$0000
     @read_loop:
@@ -68,7 +65,7 @@ read:
         PLY
         INY
         CMP #$0A
-        BEQ @read_loop ; while the character is '\n' we loop
+        BNE @read_loop ; while the character is not '\n' we loop
     LDA #$0A
     JSR uart_send_char
 
@@ -105,7 +102,9 @@ error:
 read_ptr_0:
     LDY #$0003 ; counter
     @ptr_loop:
+        PHY
         JSR read_hex_8
+        PLY
         STA ptr_0-1,Y
         DEY
         BNE @ptr_loop
@@ -127,12 +126,11 @@ read_hex_8:
     RTS
 
 read_hex_4:
-    ; X = offset
-    ; increments X by 1 before returning
-    ; value in A
-    LDA read_buff,X ; char in X
-    ; assuming valid hex digit
-    INX
+    JSR uart_read_char
+    PHA
+    JSR uart_send_char
+    JSR uart_flush
+    PLA
     CMP #':' ; one after '9'
     BMI @dec_digit
     ; letter, lower -> upper
