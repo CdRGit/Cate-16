@@ -68,7 +68,7 @@ read:
         PLY
         INY
         CMP #$0A
-        BNE @read_loop ; while the character is not '\n' we loop
+        BEQ @read_loop ; while the character is '\n' we loop
     LDA #$0A
     JSR uart_send_char
 

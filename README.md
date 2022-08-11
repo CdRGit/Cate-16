@@ -8,7 +8,7 @@
 
 # ROM Monitor
 Currently the CATE-16 runs a simple ROM monitor with two commands:
-- `Rxxxxxx` which reads consecutive bytes from 24 bit address `xxxxxx` (enter after the command, any other key to keep reading)
+- `Rxxxxxx` which reads consecutive bytes from 24 bit address `xxxxxx` (enter after the command to keep reading, any other key to finish)
 - `H` which halts the computer immediately
 
 # Memory map
