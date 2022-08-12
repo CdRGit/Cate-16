@@ -72,6 +72,9 @@ impl AddressingMode {
             Absolute(addr) => {
                 (cpu.dbr, addr)
             }
+            AbsoluteLong(bank, addr) => {
+                (bank, addr)
+            }
             AbsIndexedX(offset) => {
                 (cpu.dbr, offset.wrapping_add(cpu.x))
             }

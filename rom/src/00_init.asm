@@ -1,12 +1,12 @@
 .include "io.inc"
 
-.import uart_send_char
-.import uart_read_char
-.import uart_setup
-.import uart_flush
-.import uart_read_line
+.import uart_send_char : far
+.import uart_read_char : far
+.import uart_setup : far
+.import uart_flush : far
+.import uart_read_line : far
 
-.import monitor_start
+.import monitor_start : far
 
 .zeropage
 .res 192 ; reserve user direct page area
@@ -23,9 +23,9 @@ reset:
     LDX #$3FFF
     TXS
     
-    JSR uart_setup
+    JSL uart_setup
 
-    JMP monitor_start
+    JML monitor_start
 tbd:
     STP
 

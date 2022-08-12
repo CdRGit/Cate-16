@@ -1,10 +1,12 @@
-.export monitor_start
+.export monitor_start : far
 
-.import uart_read_char
-.import uart_read_line
-.import uart_send_char
-.import uart_send_string
-.import uart_flush
+.import uart_read_char : far
+.import uart_read_line : far
+.import uart_send_char : far
+.import uart_send_string : far
+.import uart_flush : far
+
+.import os_entry : far
 
 .zeropage
 ptr_0:
@@ -12,15 +14,13 @@ ptr_0:
 scratch:
     .res 16
 
-.segment "LOWRAM_0"
-
-.segment "FLASH_0"
+.segment "FLASH_1"
 .a8
 .i16
 
 monitor_start:
     LDA #^welcome_msg
-    LDX #welcome_msg
+    LDX #.loword(welcome_msg)
     JSR uart_send_string
     JSR uart_flush
 @command_loop:
@@ -42,6 +42,10 @@ execute_command:
     BNE @not_halt
     JMP halt
 @not_halt:
+    CMP #'O'
+    BNE @not_operating_sytem
+    JMP os_entry
+@not_operating_sytem:
     JMP error
 
 halt:
@@ -94,7 +98,7 @@ write_hex_8:
     RTS
 error:
     LDA #^error_msg
-    LDX #error_msg
+    LDX #.loword(error_msg)
     JSR uart_send_string
     JSR uart_flush
     RTS

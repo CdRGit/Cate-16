@@ -8,21 +8,45 @@ tx_buffer: .res 256
 tx_write_ptr: .res 2
 tx_read_ptr: .res 2
 
-.segment "FLASH_0"
+.segment "FLASH_1"
+
+.export uart_setup : far
+.export uart_read_char : far
+.export uart_read_line : far
+.export uart_send_char : far
+.export uart_send_string : far
+.export uart_flush : far
+
+uart_setup:
+    JSR uart_setup_internal
+    RTL
+
+uart_send_string:
+    JSR uart_send_string_internal
+    RTL
+
+uart_read_line:
+    JSR uart_read_line_internal
+    RTl
+
+uart_send_char:
+    JSR uart_send_char_internal
+    RTL
+
+uart_read_char:
+    JSR uart_read_char_internal
+    RTL
+
+uart_flush:
+    JSR uart_flush_internal
+    RTL
 
 .include "io.inc"
-
-.export uart_setup
-.export uart_read_char
-.export uart_read_line
-.export uart_send_char
-.export uart_send_string
-.export uart_flush
 
 .a8
 .i16
 
-uart_setup:
+uart_setup_internal:
     LDA UART_LINE_CONTROL
     ORA #$80
     STA UART_LINE_CONTROL
@@ -55,7 +79,7 @@ uart_setup:
     STX tx_write_ptr
     RTS
 
-uart_read_char:
+uart_read_char_internal:
     @wait_loop:
         LDA UART_LINE_STATUS
         AND #%0000000_1 ; receive data ready
@@ -66,7 +90,7 @@ uart_read_char:
 ; [A:23-15][X:15-0] ptr
 ; null terminated string
 ; clobbers all registers
-uart_send_string:
+uart_send_string_internal:
     STX writebuff_ptr
     STA writebuff_ptr + 2
     LDY #$0000
@@ -74,7 +98,7 @@ uart_send_string:
     LDA [writebuff_ptr],Y
     BEQ @done
     PHY
-    JSR uart_send_char
+    JSR uart_send_char_internal
     PLY
     INY
     BRA @send_loop
@@ -88,7 +112,7 @@ uart_send_string:
 ; A = last char read
 ; X = size left
 ; Y = length read in
-uart_read_line:
+uart_read_line_internal:
     STX readbuff_ptr
     STA readbuff_ptr + 2
     STY readbuff_size
@@ -109,12 +133,12 @@ uart_read_line:
         PHX ; preserve X
         ; clear out previous character on line
         LDA #$08 ; backspace character = go back one
-        JSR uart_send_char
+        JSR uart_send_char_internal
         LDA #$20 ; space character = clear it out
-        JSR uart_send_char
+        JSR uart_send_char_internal
         LDA #$08 ; backspace character = go back one
-        JSR uart_send_char
-        JSR uart_flush
+        JSR uart_send_char_internal
+        JSR uart_flush_internal
         PLX ; restore X
         PLY ; restore Y
         BRA @read_loop
@@ -127,8 +151,8 @@ uart_read_line:
     PHY ; Y gets stored on the stack (uart_flush might corrupt it)
     PHX ; X gets stored on the stack (uart_flush might corrupt it)
     PHA ; A gets stored on the stack (uart_flush might corrupt it)
-    JSR uart_send_char
-    JSR uart_flush
+    JSR uart_send_char_internal
+    JSR uart_flush_internal
     PLA ; A gets restored
     PLX ; X gets restored
     PLY ; Y gets restored
@@ -142,7 +166,7 @@ uart_read_line:
     PLA
     RTS
 
-uart_send_char:
+uart_send_char_internal:
     PHA
     LDA tx_write_ptr
     CMP tx_read_ptr
@@ -154,10 +178,10 @@ uart_send_char:
     STA tx_buffer,X
     RTS
 @flush:
-    JSR uart_flush
+    JSR uart_flush_internal
     BRA @continue
 
-uart_flush:
+uart_flush_internal:
     LDA tx_read_ptr
     CMP tx_write_ptr
     BEQ @exit
@@ -178,7 +202,7 @@ uart_flush:
         BEQ @exit
         DEY
         BNE @send_loop
-    BRA uart_flush
+    BRA uart_flush_internal
 
 @exit:
     RTS

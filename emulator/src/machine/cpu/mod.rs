@@ -176,9 +176,11 @@ impl W65C816 {
 
         macro_rules! instr {
             ( $name:ident ) => {{
+                //println!("{:02X}{:04X} {}", self.pbr, self.pc.wrapping_sub(1), stringify!($name));
                 self.$name();
             }};
             ( $name:ident $am:ident ) => {{
+                //println!("{:02X}{:04X} {}", self.pbr, self.pc.wrapping_sub(1), stringify!($name));
                 let am = self.$am();
                 self.$name(am);
             }};
@@ -205,9 +207,13 @@ impl W65C816 {
 
             // jumps
             0x4C => instr!( jmp absolute ),
+            0x5C => instr!( jml absolute_long ),
+
             0x20 => instr!( jsr absolute ),
+            0x22 => instr!( jsl absolute_long ),
 
             0x60 => instr!( rts ),
+            0x6B => instr!( rtl ),
 
             // comparisons
             0xCD => instr!( cmp absolute ),
@@ -427,6 +433,11 @@ impl W65C816 {
         self.pc = addr;
     }
 
+    fn jml(&mut self, am: AddressingMode) {
+        let a = am.address(self);
+        self.branch(a);
+    }
+
     fn jsr(&mut self, am: AddressingMode) {
         let pc = self.pc - 1;
         self.pushb((pc >> 8) as u8);
@@ -435,11 +446,32 @@ impl W65C816 {
         self.pc = am.address(self).1;
     }
 
+    fn jsl(&mut self, am: AddressingMode) {
+        let pbr = self.pbr;
+        self.pushb(pbr);
+        let pc = self.pc - 1;
+        self.pushb((pc >> 8) as u8);
+        self.pushb(pc as u8);
+
+        let (pbr, pc) = am.address(self);
+        self.pbr = pbr;
+        self.pc = pc;
+    }
+
     fn rts(&mut self) {
         let pcl = self.popb() as u16;
         let pch = self.popb() as u16;
         let pc = (pch << 8) | pcl;
         self.pc = pc + 1;   // +1 since the last byte of the JSR was saved
+    }
+
+    fn rtl(&mut self) {
+        let pcl = self.popb() as u16;
+        let pch = self.popb() as u16;
+        let pbr = self.popb();
+        let pc = (pch << 8) | pcl;
+        self.pbr = pbr;
+        self.pc = pc + 1;   // +1 since the last byte of the JSL was saved
     }
 
     fn cmp(&mut self, am: AddressingMode) {
@@ -732,6 +764,12 @@ impl W65C816 {
 
     fn absolute(&mut self) -> AddressingMode {
         AddressingMode::Absolute(self.fetchw())
+    }
+
+    fn absolute_long(&mut self) -> AddressingMode {
+        let addr = self.fetchw();
+        let bank = self.fetchb();
+        AddressingMode::AbsoluteLong(bank, addr)
     }
 
     fn absolute_indexed_x(&mut self) -> AddressingMode {
