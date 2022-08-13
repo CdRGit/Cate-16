@@ -5,7 +5,7 @@ OBJS = $(patsubst %.asm, %.o, $(wildcard $(SDIR)/*.asm))
 OBJS := $(subst $(SDIR), $(ODIR), $(OBJS))
 
 boot_rom: bin/rom
-	cat $(OBJS) > $@
+	cat bin/rom-* > $@
 
 bin/rom:$(OBJS)
 	ld65 -o bin/rom -C cate-16_layout.cfg $(OBJS)

@@ -16,7 +16,8 @@
 .res $3000 ; reserve memory for user
 
 .segment "FLASH_0"
-reset:
+.export d_reset
+d_reset:
     CLC
     XCE
     REP #%00010000 ; small acc and large idx
@@ -54,5 +55,5 @@ tbd:
 .word $0000 ; (BRK)
 .word tbd   ; ABORT
 .word tbd   ; NMI
-.word reset ; RESET
+.word d_reset ; RESET
 .word tbd   ; IRQ

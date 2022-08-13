@@ -15,10 +15,9 @@ os_entry:
     JSL uart_flush
     STP
 
-.include "currentdate.inc"
+; .include "currentdate.inc"
 
 os_welcome_string:
     .byte "\x1B[2J\x1B[1;1H"
-    .byte .sprintf("Build: %04d-%02d-%02d at %02d:%02d:%02d", year, month, day, hour, minute, second)
-    .byte "\n"
+    ; .byte .sprintf("Build: %04d-%02d-%02d at %02d:%02d:%02d\n", year, month, day, hour, minute, second)
     .asciiz "CATE-16 Operating System\n> "
