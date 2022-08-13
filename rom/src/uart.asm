@@ -1,6 +1,7 @@
 .zeropage
 readbuff_ptr: .res 3
 readbuff_size: .res 2
+readbuff_left_steps: .res 2
 writebuff_ptr: .res 3
 
 .segment "LOWRAM_0"
@@ -11,6 +12,7 @@ tx_read_ptr: .res 2
 .segment "FLASH_1"
 
 .include "io.inc"
+.macpack longbranch
 
 .a8
 .i16
@@ -89,6 +91,10 @@ d_uart_read_line:
     STX readbuff_ptr
     STA readbuff_ptr + 2
     STY readbuff_size
+
+    LDX #$0000
+    STX readbuff_left_steps
+
     TYX ; y (size) -> x
     LDY #$0000    
     ; Y = index
@@ -102,20 +108,97 @@ d_uart_read_line:
         CPY #$0000
         BEQ @read_loop ; delete at start = do nothing
         DEY
-        PHY ; preserve Y
+        PHY
+        LDY readbuff_left_steps
+        BNE :+
+        PLY
+        BRA :++
+    :
+        INY
+        STY readbuff_left_steps
+        PLY
+    :
         PHX ; preserve X
+        PHY ; preserve Y
         ; clear out previous character on line
         LDA #$08 ; backspace character = go back one
         JSR d_uart_send_char
         LDA #$20 ; space character = clear it out
+        PLY
+        STA [readbuff_ptr],Y
+        PHY
         JSR d_uart_send_char
         LDA #$08 ; backspace character = go back one
         JSR d_uart_send_char
         JSR d_uart_flush
-        PLX ; restore X
         PLY ; restore Y
+        PLX ; restore X
         BRA @read_loop
 @not_delete:
+    CMP #$1B
+    BNE @not_escape
+        JSR d_uart_read_char
+        CMP #'['
+        BNE @read_loop
+        JSR d_uart_read_char
+        CMP #'A'
+        BNE @not_up
+        BRA @read_loop
+    @not_up:
+        CMP #'B'
+        BNE @not_down
+        BRA @read_loop
+    @not_down:
+        CMP #'C'
+        BNE @not_right
+        PHY
+        LDY readbuff_left_steps
+        BNE :+
+        PLY
+        BRA @read_loop
+    :
+        DEY
+        STY readbuff_left_steps
+        PLY
+        INY
+        PHY
+        PHX
+        LDA #$1B
+        JSR d_uart_send_char
+        LDA #'['
+        JSR d_uart_send_char
+        LDA #'C'
+        JSR d_uart_send_char
+        JSR d_uart_flush
+        PLX
+        PLY
+        BRA @read_loop
+    @not_right:
+        CMP #'D'
+        BNE @not_left
+        CPY #$0000
+        jeq @read_loop
+        DEY
+        PHY
+        LDY readbuff_left_steps
+        INY
+        STY readbuff_left_steps
+        PLY
+        PHY
+        PHX
+        LDA #$1B
+        JSR d_uart_send_char
+        LDA #'['
+        JSR d_uart_send_char
+        LDA #'D'
+        JSR d_uart_send_char
+        JSR d_uart_flush
+        PLX
+        PLY
+        BRL @read_loop
+    @not_left:
+        BRL @read_loop
+@not_escape:
     CMP #$0A
     BEQ @exit ; newline, exit immediately
     ; ok store & echo it
@@ -130,9 +213,19 @@ d_uart_read_line:
     PLX ; X gets restored
     PLY ; Y gets restored
     DEX
-    BNE @read_loop
+    jne @read_loop
 
 @exit:
+    PHX
+    LDX readbuff_left_steps
+:
+    CPX #$0000
+    BEQ :+
+    DEX
+    INY
+    BRA :-
+:
+    PLX
     PHA
     LDA #$00
     STA [readbuff_ptr],Y

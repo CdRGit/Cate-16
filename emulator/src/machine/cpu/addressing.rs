@@ -75,6 +75,14 @@ impl AddressingMode {
             AbsoluteLong(bank, addr) => {
                 (bank, addr)
             }
+            AbsLongIndexedX(bank, addr) => {
+                let a = ((bank as u32) << 16) | addr as u32;
+                let eff_addr = a + cpu.x as u32;
+                assert!(eff_addr & 0xff000000 == 0, "address overflow");
+                let bank = eff_addr >> 16;
+                let addr = eff_addr as u16;
+                (bank as u8, addr)
+            }
             AbsIndexedX(offset) => {
                 (cpu.dbr, offset.wrapping_add(cpu.x))
             }
@@ -83,6 +91,9 @@ impl AddressingMode {
             }
             Rel(rel) => {
                 (cpu.pbr, (cpu.pc as i16).wrapping_add(rel as i16) as u16)
+            }
+            RelLong(rel_long) => {
+                (cpu.pbr, (cpu.pc as i16).wrapping_add(rel_long) as u16)
             }
             DirectIndirectLong(offset) => {
                 let addr_ptr = cpu.d.wrapping_add(offset as u16);

@@ -21,18 +21,18 @@ scratch:
 monitor_start:
     LDA #^welcome_msg
     LDX #.loword(welcome_msg)
-    JSR uart_send_string
-    JSR uart_flush
+    JSL uart_send_string
+    JSL uart_flush
 @command_loop:
     JSR prompt
     JSR execute_command
     BRA @command_loop
 
 execute_command:
-    JSR uart_read_char
+    JSL uart_read_char
     PHA
-    JSR uart_send_char
-    JSR uart_flush
+    JSL uart_send_char
+    JSL uart_flush
     PLA
     CMP #'R'
     BNE @not_read
@@ -46,12 +46,33 @@ execute_command:
     BNE @not_operating_sytem
     JMP os_entry
 @not_operating_sytem:
+    CMP #'K'
+    BNE @not_key
+    JMP key
+@not_key:
     JMP error
+
+key:
+    LDA #':'
+    JSL uart_send_char
+    JSL uart_flush
+    JSL uart_read_char
+    PHA
+    JSR write_hex_8
+    JSL uart_flush
+    PLA
+    CMP #$0A
+    BNE key
+@exit:
+    JSL uart_send_char
+    JSL uart_flush
+    RTS
+
 
 halt:
     LDA #$0A
-    JSR uart_send_char
-    JSR uart_flush
+    JSL uart_send_char
+    JSL uart_flush
     STP
 
 read:
@@ -60,18 +81,18 @@ read:
     LDY #$0000
     @read_loop:
         LDA #':'
-        JSR uart_send_char
+        JSL uart_send_char
         LDA [ptr_0],Y
         PHY
         JSR write_hex_8
-        JSR uart_flush
-        JSR uart_read_char
+        JSL uart_flush
+        JSL uart_read_char
         PLY
         INY
         CMP #$0A
         BNE @read_loop ; while the character is not '\n' we loop
     LDA #$0A
-    JSR uart_send_char
+    JSL uart_send_char
 
     RTS
 @error:
@@ -88,19 +109,20 @@ write_hex_8:
     LSR
     LSR
     TAX
-    LDA hex_table,X
-    JSR uart_send_char
+    LDA f:hex_table,X
+    JSL uart_send_char
     PLA
     AND #$0F
     TAX
-    LDA hex_table,X
-    JSR uart_send_char
+    LDA f:hex_table,X
+    JSL uart_send_char
     RTS
+
 error:
     LDA #^error_msg
     LDX #.loword(error_msg)
-    JSR uart_send_string
-    JSR uart_flush
+    JSL uart_send_string
+    JSL uart_flush
     RTS
 
 read_ptr_0:
@@ -130,10 +152,10 @@ read_hex_8:
     RTS
 
 read_hex_4:
-    JSR uart_read_char
+    JSL uart_read_char
     PHA
-    JSR uart_send_char
-    JSR uart_flush
+    JSL uart_send_char
+    JSL uart_flush
     PLA
     CMP #':' ; one after '9'
     BMI @dec_digit
@@ -149,10 +171,10 @@ read_hex_4:
 
 prompt:
     LDA #'$'
-    JSR uart_send_char
+    JSL uart_send_char
     LDA #' '
-    JSR uart_send_char
-    JSR uart_flush
+    JSL uart_send_char
+    JSL uart_flush
     RTS
 
 error_msg:

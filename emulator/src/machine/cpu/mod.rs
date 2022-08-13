@@ -201,6 +201,8 @@ impl W65C816 {
 
             // branches
             0x80 => instr!( bra rel ),
+            0x82 => instr!( bra relative_long ),
+
             0xF0 => instr!( beq rel ),
             0x30 => instr!( bmi rel ),
             0xD0 => instr!( bne rel ),
@@ -228,16 +230,21 @@ impl W65C816 {
             // register load + store
             0xA9 => instr!( lda immediate_acc ),
 
+            0xA5 => instr!( lda direct ),
             0xA7 => instr!( lda direct_indirect_long ),
             0xB7 => instr!( lda direct_indirect_long_idx ),
             0xAD => instr!( lda absolute ),
-            0xBD => instr!( lda absolute_indexed_x),
-            0xA5 => instr!( lda direct ),
+            0xBD => instr!( lda absolute_indexed_x ),
+            0xBF => instr!( lda absolute_long_indexed_x ),
 
             0xA2 => instr!( ldx immediate_index ),
-            0xAE => instr!( ldx absolute ),
 
+            0xA6 => instr!( ldx direct ),
+            0xAE => instr!( ldx absolute ),
+            
             0xA0 => instr!( ldy immediate_index ),
+
+            0xA4 => instr!( ldy direct ),
 
             0x85 => instr!( sta direct ),
             0x8D => instr!( sta absolute ),
@@ -766,18 +773,24 @@ impl W65C816 {
         AddressingMode::Absolute(self.fetchw())
     }
 
-    fn absolute_long(&mut self) -> AddressingMode {
-        let addr = self.fetchw();
-        let bank = self.fetchb();
-        AddressingMode::AbsoluteLong(bank, addr)
-    }
-
     fn absolute_indexed_x(&mut self) -> AddressingMode {
         AddressingMode::AbsIndexedX(self.fetchw())
     }
 
     fn absolute_indexed_y(&mut self) -> AddressingMode {
         AddressingMode::AbsIndexedY(self.fetchw())
+    }
+
+    fn absolute_long(&mut self) -> AddressingMode {
+        let addr = self.fetchw();
+        let bank = self.fetchb();
+        AddressingMode::AbsoluteLong(bank, addr)
+    }
+    
+    fn absolute_long_indexed_x(&mut self) -> AddressingMode {
+        let addr = self.fetchw();
+        let bank = self.fetchb();
+        AddressingMode::AbsLongIndexedX(bank, addr)
     }
 
     fn direct_indirect_long(&mut self) -> AddressingMode {
@@ -810,5 +823,8 @@ impl W65C816 {
 
     fn rel(&mut self) -> AddressingMode {
         AddressingMode::Rel(self.fetchb() as i8)
+    }
+    fn relative_long(&mut self) -> AddressingMode {
+        AddressingMode::RelLong(self.fetchw() as i16)
     }
 }
